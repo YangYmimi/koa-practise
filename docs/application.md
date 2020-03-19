@@ -1,42 +1,42 @@
 ### application.js
 
-* 利用 `http` 模块启动服务
+- 利用 `http` 模块启动服务
 
-* 利用 `req` 和 `res` 去封装更强大的 `context`
+- 利用 `req` 和 `res` 去封装更强大的 `context`
 
-* 利用 `koa-compose` 实现 `洋葱模型` 中间件执行机制
+- 利用 `koa-compose` 实现 `洋葱模型` 中间件执行机制
 
-* 实现异步函数的错误处理
+- 实现异步函数的错误处理
 
 ```javascript
-'use strict';
+"use strict";
 
 /**
  * Module dependencies.
  */
 
-const isGeneratorFunction = require('is-generator-function');
-const debug = require('debug')('koa:application');
-const onFinished = require('on-finished');
-const response = require('./response');
+const isGeneratorFunction = require("is-generator-function");
+const debug = require("debug")("koa:application");
+const onFinished = require("on-finished");
+const response = require("./response");
 
 // 组合中间件，利用 promise，将中间件按照 app.use() 顺序执行，无论中间件是同步还是异步，都利用 promise 转成链式执行
 // refs: https://github.com/koajs/compose/blob/master/index.js
-const compose = require('koa-compose');
-const context = require('./context');
-const request = require('./request');
-const statuses = require('statuses');
-const Emitter = require('events'); // node的Events模块，拥有事件处理的能力
-const util = require('util');
-const Stream = require('stream');
-const http = require('http');
-const only = require('only');
+const compose = require("koa-compose");
+const context = require("./context");
+const request = require("./request");
+const statuses = require("statuses");
+const Emitter = require("events"); // node的Events模块，拥有事件处理的能力
+const util = require("util");
+const Stream = require("stream");
+const http = require("http");
+const only = require("only");
 
 // 兼容 koa1 的 generator 写法
 // https://github.com/koajs/convert/blob/master/index.js
-const convert = require('koa-convert');
-const deprecate = require('depd')('koa');
-const { HttpError } = require('http-errors');
+const convert = require("koa-convert");
+const deprecate = require("depd")("koa");
+const { HttpError } = require("http-errors");
 
 /**
  * Expose `Application` class.
@@ -51,27 +51,31 @@ module.exports = class Application extends Emitter {
    */
 
   /**
-    *
-    * @param {object} [options] Application options
-    * @param {string} [options.env='development'] Environment
-    * @param {string[]} [options.keys] Signed cookie keys
-    * @param {boolean} [options.proxy] Trust proxy headers
-    * @param {number} [options.subdomainOffset] Subdomain offset
-    * @param {boolean} [options.proxyIpHeader] proxy ip header, default to X-Forwarded-For
-    * @param {boolean} [options.maxIpsCount] max ips read from proxy ip header, default to 0 (means infinity)
-    *
-    */
-
+   *
+   * @param {object} [options] Application options
+   * @param {string} [options.env='development'] Environment
+   * @param {string[]} [options.keys] Signed cookie keys
+   * @param {boolean} [options.proxy] Trust proxy headers
+   * @param {number} [options.subdomainOffset] Subdomain offset
+   * @param {boolean} [options.proxyIpHeader] proxy ip header, default to X-Forwarded-For
+   * @param {boolean} [options.maxIpsCount] max ips read from proxy ip header, default to 0 (means infinity)
+   *
+   */
+  // new Koa({options})
   constructor(options) {
     super();
     options = options || {};
     this.proxy = options.proxy || false;
     this.subdomainOffset = options.subdomainOffset || 2;
-    this.proxyIpHeader = options.proxyIpHeader || 'X-Forwarded-For';
+    // 代理 IP 消息头
+    this.proxyIpHeader = options.proxyIpHeader || "X-Forwarded-For";
+    // 从代理 ip 消息头读取的最大 ips
     this.maxIpsCount = options.maxIpsCount || 0;
-    this.env = options.env || process.env.NODE_ENV || 'development';
+    // 默认是 NODE_ENV 或者是 development
+    this.env = options.env || process.env.NODE_ENV || "development";
     if (options.keys) this.keys = options.keys; // 设置签名的 Cookie 密钥
-    this.middleware = []; // 存放所有中间件
+    // 存放所有中间件，这边是核心
+    this.middleware = [];
 
     // 通过context.js、request.js、response.js创建对应的context、request、response
     this.context = Object.create(context);
@@ -91,11 +95,13 @@ module.exports = class Application extends Emitter {
    * @return {Server}
    * @api public
    */
-
+  // 我们使用 var app = new Koa() 之后
+  // app.listen() 其实就是 http.createServer(app.callback()).listen(...) 的语法糖
   listen(...args) {
-    debug('listen');
+    debug("listen");
 
     // 利用 http.createServer 初始化服务器，参数是 function
+    // this 就是 Koa 实例
     const server = http.createServer(this.callback());
     return server.listen(...args);
   }
@@ -109,11 +115,7 @@ module.exports = class Application extends Emitter {
    */
 
   toJSON() {
-    return only(this, [
-      'subdomainOffset',
-      'proxy',
-      'env'
-    ]);
+    return only(this, ["subdomainOffset", "proxy", "env"]);
   }
 
   /**
@@ -136,17 +138,22 @@ module.exports = class Application extends Emitter {
    * @return {Application} self
    * @api public
    */
-
+  // 将给定的中间件函数添加到中间件数组中
   use(fn) {
-    if (typeof fn !== 'function') throw new TypeError('middleware must be a function!');
-    if (isGeneratorFunction(fn)) { // 兼容 generator 写法
-      deprecate('Support for generators will be removed in v3. ' +
-                'See the documentation for examples of how to convert old middleware ' +
-                'https://github.com/koajs/koa/blob/master/docs/migration.md');
+    if (typeof fn !== "function")
+      throw new TypeError("middleware must be a function!");
+    if (isGeneratorFunction(fn)) {
+      // 兼容 generator 写法
+      deprecate(
+        "Support for generators will be removed in v3. " +
+          "See the documentation for examples of how to convert old middleware " +
+          "https://github.com/koajs/koa/blob/master/docs/migration.md"
+      );
       fn = convert(fn);
     }
-    debug('use %s', fn._name || fn.name || '-');
-    this.middleware.push(fn); // middleware 存放所有中间件
+    debug("use %s", fn._name || fn.name || "-");
+    // middleware 存放所有中间件
+    this.middleware.push(fn);
     return this;
   }
 
@@ -165,7 +172,7 @@ module.exports = class Application extends Emitter {
 
     // 由于继承 EventEmitter 模块，所以可以监听 error 事件
     // listenerCount 返回当前监听事件的数量
-    if (!this.listenerCount('error')) this.on('error', this.onerror);
+    if (!this.listenerCount("error")) this.on("error", this.onerror);
 
     const handleRequest = (req, res) => {
       const ctx = this.createContext(req, res); // koa 中的 context
@@ -187,7 +194,9 @@ module.exports = class Application extends Emitter {
     const onerror = err => ctx.onerror(err);
     const handleResponse = () => respond(ctx);
     onFinished(res, onerror);
-    return fnMiddleware(ctx).then(handleResponse).catch(onerror);
+    return fnMiddleware(ctx)
+      .then(handleResponse)
+      .catch(onerror);
   }
 
   /**
@@ -202,8 +211,8 @@ module.exports = class Application extends Emitter {
     // ctx.response => koa 的 Response 对象.
 
     // context 会挂载基于 request.js 和 response.js 实现的 request 和 response 对象
-    const request = context.request = Object.create(this.request);
-    const response = context.response = Object.create(this.response);
+    const request = (context.request = Object.create(this.request));
+    const response = (context.response = Object.create(this.response));
 
     // 挂载应用程序实例引用
     context.app = request.app = response.app = this; // 应用程序的实例引用
@@ -229,14 +238,15 @@ module.exports = class Application extends Emitter {
    */
   // 错误处理
   onerror(err) {
-    if (!(err instanceof Error)) throw new TypeError(util.format('non-error thrown: %j', err));
+    if (!(err instanceof Error))
+      throw new TypeError(util.format("non-error thrown: %j", err));
 
     if (404 == err.status || err.expose) return; // status = 404 或者 error.expose = true 时候也不输出错误
     if (this.silent) return; // 默认情况下，输出错误信息，当 app.silent = true 时候处于静默状态，不输出错误信息
 
     const msg = err.stack || err.toString();
     console.error();
-    console.error(msg.replace(/^/gm, '  '));
+    console.error(msg.replace(/^/gm, "  "));
     console.error();
   }
 };
@@ -263,8 +273,8 @@ function respond(ctx) {
     return res.end();
   }
 
-  if ('HEAD' === ctx.method) {
-    if (!res.headersSent && !ctx.response.has('Content-Length')) {
+  if ("HEAD" === ctx.method) {
+    if (!res.headersSent && !ctx.response.has("Content-Length")) {
       const { length } = ctx.response;
       if (Number.isInteger(length)) ctx.length = length;
     }
@@ -279,7 +289,7 @@ function respond(ctx) {
       body = ctx.message || String(code);
     }
     if (!res.headersSent) {
-      ctx.type = 'text';
+      ctx.type = "text";
       ctx.length = Buffer.byteLength(body);
     }
     return res.end(body);
@@ -287,7 +297,7 @@ function respond(ctx) {
 
   // responses
   if (Buffer.isBuffer(body)) return res.end(body);
-  if ('string' == typeof body) return res.end(body);
+  if ("string" == typeof body) return res.end(body);
   if (body instanceof Stream) return body.pipe(res);
 
   // body: json

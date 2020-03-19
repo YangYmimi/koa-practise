@@ -1,22 +1,22 @@
-const Koa = require('koa');
-const KoaRouter = require('koa-router');
-const bodyParser = require('koa-bodyparser');
+const Koa = require("koa");
+const KoaRouter = require("koa-router");
+const bodyParser = require("koa-bodyparser");
 
 const app = new Koa();
 const router = new KoaRouter();
 
 // Index route
-router.get('/', async (ctx, next) => {
+router.get("/", async (ctx, next) => {
   // await next();
-  ctx.response.body = '<h1>Index</h1>';
+  ctx.response.body = "<h1>Index</h1>";
 });
 
-router.get('/user/:name', async (ctx, next) => {
+router.get("/user/:name", async (ctx, next) => {
   // await next();
   ctx.response.body = `<h1>Welcome: ${ctx.params.name}</h1>`;
 });
 
-router.get('/login', async (ctx, next) => {
+router.get("/login", async (ctx, next) => {
   ctx.response.body = `
     <h1>Index</h1>
       <form action="/signin" method="post">
@@ -27,9 +27,9 @@ router.get('/login', async (ctx, next) => {
     `;
 });
 
-router.post('/signin', async (ctx, next) => {
-  const { username, password } = ctx.request.body
-  if (password === 'admin') {
+router.post("/signin", async (ctx, next) => {
+  const { username, password } = ctx.request.body;
+  if (password === "admin") {
     ctx.response.body = `
       <p>Login Successfully.</p>
       <p>Welcome, ${username}</p>
@@ -49,4 +49,4 @@ app.use(bodyParser());
 app.use(router.routes());
 
 app.listen(3000);
-console.log('app started at http://localhost:3000');
+console.log("app started at http://localhost:3000");
