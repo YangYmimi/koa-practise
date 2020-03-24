@@ -1,5 +1,7 @@
 ### application.js
 
+这个是 `Koa` 的入口文件。
+
 - 利用 `http` 模块启动服务
 
 - 利用 `req` 和 `res` 去封装更强大的 `context`
@@ -14,7 +16,7 @@
 /**
  * Module dependencies.
  */
-
+// 判断是否是 generator 函数
 const isGeneratorFunction = require("is-generator-function");
 const debug = require("debug")("koa:application");
 const onFinished = require("on-finished");
@@ -102,6 +104,7 @@ module.exports = class Application extends Emitter {
 
     // 利用 http.createServer 初始化服务器，参数是 function
     // this 就是 Koa 实例
+    // this.callback() 本身是回调函数，创建 server 成功之后，服务器回调 (req, res) => {}
     const server = http.createServer(this.callback());
     return server.listen(...args);
   }
@@ -165,6 +168,7 @@ module.exports = class Application extends Emitter {
    * @api public
    */
   // 返回一个 (req, res) => {} 的函数
+  // http.createServer
   callback() {
     // middleware 必须是个 array 类型
     // middleware 每项必须是个 func 类型
@@ -175,10 +179,12 @@ module.exports = class Application extends Emitter {
     if (!this.listenerCount("error")) this.on("error", this.onerror);
 
     const handleRequest = (req, res) => {
-      const ctx = this.createContext(req, res); // koa 中的 context
+      // 创建 koa 中的 context
+      const ctx = this.createContext(req, res);
       return this.handleRequest(ctx, fn); // context 和 中间件 promise
     };
 
+    // 返回 (req, res) 的回调函数
     return handleRequest;
   }
 
